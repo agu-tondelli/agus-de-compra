@@ -91,6 +91,18 @@ h1 .emo{font-size:.62em;vertical-align:.12em;white-space:nowrap}
 .order .sum b{font-family:var(--display);font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
 .order .sum small{display:block;opacity:.75;font-size:12px}
 .order .btn{background:var(--tag);color:var(--tag-ink)}
+.scroller{position:relative;min-width:0}
+.scroller:has(> .chips[hidden]){display:none}
+.arr{position:absolute;top:0;bottom:0;width:44px;border:0;padding:0;cursor:pointer;z-index:2;color:var(--ink);font:700 26px/1 var(--body);display:flex;align-items:center}
+.arr.l{left:-4px;justify-content:flex-start;padding-left:2px;background:linear-gradient(90deg,var(--bg) 45%,transparent)}
+.arr.r{right:-4px;justify-content:flex-end;padding-right:2px;background:linear-gradient(270deg,var(--bg) 45%,transparent)}
+.band .arr{color:var(--band-ink)}
+.band .arr.l{left:0;border-radius:14px 0 0 14px;padding-left:8px;background:linear-gradient(90deg,var(--band) 50%,transparent)}
+.band .arr.r{right:0;border-radius:0 14px 14px 0;padding-right:8px;background:linear-gradient(270deg,var(--band) 50%,transparent)}
+.arr[hidden]{display:none}
+.arr:focus-visible{outline:2px solid var(--deal);outline-offset:-2px}
+@media (prefers-reduced-motion:no-preference){.arr.r:not([hidden]){animation:nudge 1.6s ease-in-out 2}}
+@keyframes nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(4px)}}
 dialog{border:0;border-radius:18px;padding:0;max-width:min(520px,calc(100vw - 24px));width:100%;background:var(--surface);color:var(--ink)}
 dialog::backdrop{background:rgba(0,0,0,.45)}
 .dlg{padding:18px;display:grid;gap:12px}
@@ -126,8 +138,8 @@ footer{padding-block:28px 0;font-size:12px;color:var(--muted);max-width:65ch}
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       <input id="q" type="search" placeholder="Buscar: Kit Kat, Dolce Gusto, Purina…" autocomplete="off">
     </label>
-    <div class="chips" id="chips" role="toolbar" aria-label="Pasillos"></div>
-    <div class="chips sub" id="sub" role="toolbar" aria-label="Tipos" hidden></div>
+    <div class="scroller"><div class="chips" id="chips" role="toolbar" aria-label="Pasillos"></div><button class="arr l" aria-label="Ver categorías anteriores" hidden>‹</button><button class="arr r" aria-label="Ver más categorías" hidden>›</button></div>
+    <div class="scroller band"><div class="chips sub" id="sub" role="toolbar" aria-label="Tipos" hidden></div><button class="arr l" aria-label="Ver anteriores" hidden>‹</button><button class="arr r" aria-label="Ver más" hidden>›</button></div>
   </div>
 
   <div class="meta"><h2 id="ttl">Ofertas</h2><span id="cnt"></span></div>
@@ -191,7 +203,7 @@ const deals=D.filter(r=>r[5]), news=D.filter(r=>r[7]);
 
 function chips(){
   const c=$('chips'); c.innerHTML='';
-  const mk=(id,label,n,cls,nm)=>{const b=document.createElement('button');b.className='chip'+(cls?' '+cls:'');if(nm){b.title=nm;b.setAttribute('aria-label',nm+', '+n+' productos')}b.setAttribute('aria-pressed',String(view===id));b.innerHTML=label+'<small>'+n+'</small>';b.onclick=()=>{view=id;sub='';shown=60;q='';$('q').value='';chips();render();window.scrollTo({top:$('ttl').getBoundingClientRect().top+scrollY-140})};c.appendChild(b)};
+  const mk=(id,label,n,cls,nm)=>{const b=document.createElement('button');b.className='chip'+(cls?' '+cls:'');if(nm){b.title=nm;b.setAttribute('aria-label',nm+', '+n+' productos')}b.setAttribute('aria-pressed',String(view===id));b.innerHTML=label+'<small>'+n+'</small>';b.onclick=()=>{const sl=$('chips').scrollLeft;view=id;sub='';shown=60;q='';$('q').value='';chips();$('chips').scrollLeft=sl;render();window.scrollTo({top:$('ttl').getBoundingClientRect().top+scrollY-140})};c.appendChild(b)};
   mk('deals','🏷️',deals.length,'deal','Ofertas');
   mk('new','✨',news.length,'','Novedades');
   order.forEach(i=>mk('c'+i,EMO[CATS[i]]||CATS[i],counts[i],'',CATS[i]));
@@ -254,6 +266,10 @@ $('more').onclick=()=>{shown+=90;render()};
 let tm;$('q').oninput=e=>{clearTimeout(tm);tm=setTimeout(()=>{q=e.target.value.trim();shown=60;render()},150)};
 // chips carry their view id for pressed state
 const _mk=chips;chips=function(){_mk();const ids=['deals','new',...order.map(i=>'c'+i),'all'];document.querySelectorAll('#chips .chip').forEach((b,i)=>b.dataset.v=ids[i])};
+const scrollers=[...document.querySelectorAll('.scroller')].map(w=>{const c=w.querySelector('.chips'),l=w.querySelector('.arr.l'),r=w.querySelector('.arr.r');const upd=()=>{const max=c.scrollWidth-c.clientWidth;l.hidden=c.scrollLeft<6;r.hidden=c.scrollLeft>=max-6};c.addEventListener('scroll',upd,{passive:true});l.onclick=()=>c.scrollBy({left:-c.clientWidth*.7,behavior:'smooth'});r.onclick=()=>c.scrollBy({left:c.clientWidth*.7,behavior:'smooth'});return upd});
+const updArrows=()=>requestAnimationFrame(()=>scrollers.forEach(f=>f()));
+addEventListener('resize',updArrows);
+const _render=render;render=function(){_render();updArrows()};
 chips();render();bar();
 </script>
 
